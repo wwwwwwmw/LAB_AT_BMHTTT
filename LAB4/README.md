@@ -1,4 +1,4 @@
-# LAB 3: NHẬN DIỆN VÀ ỨNG PHÓ CÁC MỐI ĐE DỌA ĐẾN AN TOÀN THÔNG TIN
+# LAB 4: KHẢO SÁT VÀ ĐÁNH GIÁ BỀ MẶT MẠNG BẰNG NMAP
 
 ## 1. Thông tin sinh viên
 - **Họ và tên:** Lê Trí Anh
@@ -6,22 +6,20 @@
 - **Lớp:** 11CNPM2
 
 ## 2. Môi trường thực hành
-- **Ảo hóa:** VMware Workstation Pro 26H1 (Mạng Host-only).
-- **Máy ảo:** Windows 11 25H2 x64, OS build 26200.9445.
-- **Công cụ:** Sysmon, Autoruns, Process Explorer, Wireshark, Python.
-- **Cách dựng môi trường:** Cài đặt máy ảo trên VMware, cấu hình card mạng Host-only để cô lập hệ thống, cập nhật Defender. Thiết lập thư mục `C:\LAB3`, cài đặt các công cụ bằng lệnh `winget` và tạo snapshot `LAB3_CLEAN_20260914` trước khi làm bài.
+- **Ảo hóa:** VMware Workstation Pro (Cấu hình mạng Host-Only dải `192.168.74.0/24`).
+- **Máy quét chính (Attacker):** Kali Linux (IP: `192.168.74.130`).
+- **Máy mục tiêu (Target):** Metasploitable 2 (IP: `192.168.74.129`).
+- **Công cụ sử dụng:** `nmap`, lệnh `ping`, `ip`, `ifconfig`.
 
 ## 3. Các tình huống thực hiện & Kết quả
-- **TH1:** Xác định tài sản, lỗ hổng, mối đe dọa và rủi ro -> **PASS**
-- **TH2:** Nhận diện mã độc bằng mẫu EICAR và Defender -> **PASS**
-- **TH3:** Phân tích tấn công mật khẩu và nguy cơ keylogging qua Event Log -> **PASS**
-- **TH4:** Nhận diện Backdoor (persistence và dịch vụ lắng nghe) qua Sysmon/Autoruns -> **PASS**
-- **TH5:** Phân tích Sniffing, MITM và Spoofing (HTTP vs HTTPS) bằng Wireshark -> **PASS**
-- **TH6:** Phân tích DoS, DDoS và Mail Bombing qua dataset -> **PASS**
-- **TH7:** Phân tích Social Engineering và Phishing offline -> **PASS**
-- **Cleanup:** Cô lập, dọn dẹp hệ thống và xuất mã băm SHA-256 -> **PASS**
+- **Phát hiện host (Host Discovery):** Dùng `nmap -sn` để lập bản đồ các thiết bị đang hoạt động trong mạng Host-Only -> **PASS**
+- **Khảo sát cổng TCP:** Thực hiện và so sánh kỹ thuật quét TCP Connect (`-sT`) và TCP SYN (`-sS`) -> **PASS**
+- **Khảo sát cổng UDP:** Quét 20 cổng UDP phổ biến nhất (`-sU`) -> **PASS**
+- **Nhận diện hệ thống:** Dùng `-sV` để xác định phiên bản dịch vụ (phát hiện Web, SSH, FTP cũ) và `-O` để đoán hệ điều hành (Linux 2.6.x) -> **PASS**
+- **Kiểm tra lỗ hổng bằng NSE Script:** Dùng script `smb-vuln-ms17-010` rà quét cổng 445 -> **PASS**
+- **Bảo vệ hệ thống (Hardening):** Thực hành ngắt dịch vụ Apache (cổng 80) trên máy đích và dùng Kali quét lại để chứng minh cổng đã chuyển sang trạng thái `closed` -> **PASS**
+- **Báo cáo:** Xuất kết quả rà quét ra file text (`-oN`) để lưu trữ bằng chứng -> **PASS**
 
 ## 4. Lỗi gặp phải & Cách khắc phục
-- **Lỗi Access Denied khi tạo tài khoản/dọn dẹp tác vụ:** Do chạy PowerShell ở chế độ User thường. *Khắc phục:* Tắt và mở lại PowerShell bằng tùy chọn `Run as Administrator`.
-- **Lỗi không tìm thấy đường dẫn Registry (Cannot find path):** Do gõ thiếu cú pháp. *Khắc phục:* Thêm dấu hai chấm vào biến đường dẫn (đổi `HKCU` thành `HKCU:\`).
-- **Lỗi xung đột file khi tính mã băm SHA-256:** Do tiến trình Export-Csv khóa file dữ liệu. *Khắc phục:* Bổ sung tham số `-Exclude evidence_sha256.csv` để loại trừ file đích khỏi quá trình quét mã băm.
+- **Lỗi `invalid argument` khi dùng lệnh ping trên Kali:** Do gõ thiếu tham số số lượng gói tin (gõ `ping -c 192...`). *Khắc phục:* Thêm số lượng gói tin cụ thể sau tham số `-c`, ví dụ: `ping -c 4 192.168.74.129`.
+- **Nmap báo lỗi không đủ quyền khi chạy lệnh SYN Scan (`-sS`) hoặc OS Detection (`-O`):** Do các kỹ thuật này can thiệp trực tiếp vào raw packet ở tầng thấp. *Khắc phục:* Bổ sung `sudo` vào đầu câu lệnh (ví dụ: `sudo nmap -sS...`) và nhập mật khẩu quản trị.
