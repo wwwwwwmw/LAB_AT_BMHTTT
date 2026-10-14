@@ -1,44 +1,85 @@
-Báo Cáo Thực Hành Lab 5: Thiết Lập Mô Hình Tường Lửa pfSense
-1. Tổng Quan Bài Lab
-Lab 5 tập trung vào việc triển khai và quản trị hệ thống tường lửa pfSense để bảo vệ an ninh mạng cho doanh nghiệp. Mục tiêu cốt lõi là thiết lập thành công mô hình mạng gồm ba vùng cách ly: WAN (Mạng bên ngoài/Internet), LAN (Mạng nội bộ), và DMZ (Vùng phi quân sự chứa các máy chủ public). Thông qua bài Lab, người học nắm vững cách thiết lập NAT, định tuyến và áp dụng các chính sách kiểm soát truy cập (Firewall Rules) dựa trên các kịch bản thực tế.
+LAB 6: XÁC THỰC ACTIVE DIRECTORY VÀ CHÍNH SÁCH TRUY CẬP TRÊN pfSense
 
-2. Mô Hình Mạng Cấu Hình
-Hệ thống mạng được ảo hóa trên VMware/VirtualBox với các thành phần chính:
+Sinh viên thực hiện: Lê Trí Anh
 
-pfSense Firewall (Gateway): Đóng vai trò trung tâm kiểm soát lưu lượng, được cấp 3 card mạng (WAN, LAN, DMZ).
+MSSV: 1150080125
 
-Mạng LAN (10.0.0.0/8): Vùng an toàn nội bộ. Cấu hình máy chủ Windows Server làm Domain Controller (IP tĩnh: 10.0.0.2).
+Môn học: An toàn và Bảo mật Hệ thống Thông tin (Thực hành)
 
-Mạng DMZ (172.16.0.0/16): Vùng công cộng. Cấu hình máy chủ Windows Server chạy dịch vụ IIS làm Web Server (IP tĩnh: 172.16.0.2).
+Tổng quan dự án
 
-3. Các Hạng Mục Đã Hoàn Thành
-Phần 1: Khởi tạo và Cấu hình Nền tảng
+Mục tiêu của bài Lab này là xây dựng một hệ thống mạng an toàn sử dụng tường lửa pfSense, tích hợp xác thực người dùng tập trung thông qua Active Directory (LDAP), triển khai Captive Portal để kiểm soát truy cập và áp dụng các chính sách Firewall (Rules, Aliases, Schedules) theo các kịch bản thực tế của doanh nghiệp.
 
-Cài đặt thành công pfSense CE 2.7.2 từ file ISO.
+Mô hình mạng (Topology)
 
-Thiết lập địa chỉ IP tĩnh cho cổng LAN và DMZ thông qua Console và WebGUI.
+Hệ thống được chia thành 4 phân vùng mạng chuyên biệt trên VirtualBox:
 
-Cấu hình Domain Controller (Active Directory, DNS Forwarder).
+WAN (Adapter 1): 192.168.250.0/24 - Kết nối Internet (NAT Network).
 
-Truy cập WebGUI pfSense từ máy thật và chuyển đổi Outbound NAT sang chế độ Hybrid.
+MGMT (Adapter 2): 192.168.56.254/24 - Vùng quản trị riêng biệt (Host-Only).
 
-Chuẩn hóa ruleset LAN, xóa các rule mặc định (Default allow to any) để áp dụng nguyên tắc bảo mật chặt chẽ (Default Deny).
+LAN (Adapter 3): 10.6.0.1/24 - Vùng mạng nội bộ chứa Domain Controller và các Client (Internal Network lab6-lan).
 
-Phần 2: Xử Lý Các Tình Huống Firewall Thực Tế
+DMZ (Adapter 4): 172.16.6.1/24 - Vùng chứa các dịch vụ Web (Internal Network lab6-dmz).
 
-Tình huống 1 — Chặn ICMP, cho phép Web/DNS: Thiết lập luật chặn các gói tin Ping (ICMP) từ mạng LAN ra ngoài, nhưng vẫn mở cổng 53 (DNS) và 80/443 (HTTP/HTTPS) để người dùng lướt web bình thường.
+Danh sách máy ảo:
 
-Tình huống 2 — Cấp quyền truy cập Internet chỉ định: Viết rule cho phép duy nhất IP của Domain Controller (10.0.0.2) ra ngoài Internet, đồng thời chặn toàn bộ các máy trạm khác trong mạng LAN (10.0.0.3 trở đi).
+pfSense (Firewall/Router): Định tuyến và kiểm soát luồng dữ liệu.
 
-Tình huống 3 — Cô lập vùng DMZ: Thiết lập luật ngăn chặn máy chủ trong vùng DMZ khởi tạo kết nối ngược vào mạng LAN nội bộ nhằm giảm thiểu rủi ro khi DMZ bị xâm nhập, nhưng vẫn đảm bảo máy DMZ ra được Internet.
+Windows Server 2025 (DC01): Domain Controller (10.6.0.10), quản lý Domain letrianh.local, DNS và LDAP.
 
-Tình huống 4 — NAT Port Forwarding: Mở cổng (publish) dịch vụ Web IIS từ mạng DMZ (172.16.0.2:80) ra mạng WAN (Port 8080), cho phép người dùng từ Internet truy cập trực tiếp vào trang web nội bộ thông qua IP Public của pfSense.
+Windows 10/11 (Client): Máy trạm (10.6.0.21, 10.6.0.22) dùng để kiểm thử truy cập.
 
-Tình huống 5 — System Logging: Bật tính năng ghi nhật ký trên các rule Block quan trọng, thực hiện giả lập tấn công (gửi gói tin trái phép) và phân tích file Firewall Log để truy vết chính xác Source IP, Destination IP và luật đã chặn.
+Ubuntu Server (DMZ-WEB): Giả lập nhiều website trên các IP alias (172.16.6.10, .20, .30, .40).
 
-4. Kỹ Năng Kỹ Thuật (Skills Acquired)
-Kiến trúc mạng: Tư duy thiết kế và phân hoạch các phân vùng mạng (LAN, WAN, DMZ).
+Các bước triển khai chính
 
-Vận hành Firewall: Hiểu rõ cơ chế duyệt rule ưu tiên từ trên xuống dưới (Top-Down processing) và trạng thái kết nối (Stateful packet inspection).
+1. Chuẩn bị môi trường & Dọn dẹp Firewall
 
-Bảo mật & Khắc phục sự cố: Kỹ năng xử lý lỗi mất kết nối, xung đột IP ảo hóa, cấu hình dịch vụ DNS/NAT, và khả năng đọc hiểu log hệ thống để audit an ninh mạng.
+Cấu hình IP tĩnh cho các Interface thông qua pfSense Console.
+
+Chuyển quyền truy cập WebGUI (Anti-Lockout) sang cổng MGMT (Port 443).
+
+Làm sạch hoàn toàn các rules mặc định trên tab LAN để chuẩn bị cho Captive Portal.
+
+2. Tích hợp Active Directory (LDAP)
+
+Kết nối pfSense với Windows Server AD để xác thực người dùng:
+
+Server: 10.6.0.10 (Port 389)
+
+Base DN: DC=letrianh,DC=local
+
+Bind Credentials: Administrator@letrianh.local (Tài khoản được sử dụng để khắc phục lỗi kết nối data 52e).
+
+Kiểm thử: Sử dụng công cụ Diagnostics > Authentication trên pfSense để test các user sv_a, sv_b.
+
+3. Cấu hình Captive Portal
+
+Tạo Captive Portal Zone trên giao diện LAN.
+
+Thiết lập Backend Authentication trỏ về máy chủ LDAP vừa tạo.
+
+Người dùng (Client) bắt buộc phải đăng nhập qua cổng web trước khi được cấp quyền truy cập mạng.
+
+4. Thiết lập Aliases và Schedules
+
+Aliases: Định nghĩa các nhóm IP máy trạm (CLIENT_A, POLICY_CLIENTS) và nhóm Web IP (JOB_SITE, SOCIAL_SITE, RESTRICTED_SITE, GENERAL_SITE).
+
+Schedules: Định nghĩa các khung giờ LUNCH_WINDOW (11h30-13h) và WORK_HOURS (8h-17h).
+
+Kịch bản Kiểm thử Firewall (Rules)
+
+Các chính sách được áp dụng nguyên tắc First-match (khớp từ trên xuống dưới):
+
+Kịch bản 1: Client-A bị chặn truy cập vào JOB_SITE nhưng được phép truy cập GENERAL_SITE.
+
+Kịch bản 2: Cấm toàn bộ POLICY_CLIENTS truy cập vào RESTRICTED_SITE.
+
+Kịch bản 3 (Time-based): Client-B chỉ được phép truy cập SOCIAL_SITE vào giờ nghỉ trưa (LUNCH_WINDOW). Cần kết hợp Rule Pass (có schedule) nằm trên Rule Block (luôn bật).
+
+Kịch bản 4 (Port/Time-based): Cho phép POLICY_CLIENTS lướt web (HTTP/HTTPS) trong giờ hành chính (WORK_HOURS), và chặn toàn bộ các traffic khác (như Ping/ICMP ra ngoài Internet).
+
+Kịch bản 5 (DMZ Isolation): Cô lập vùng DMZ, không cho phép các máy chủ trong DMZ chủ động khởi tạo kết nối ngược (Ping/truy cập) vào vùng LAN, nhưng LAN vẫn được truy cập DMZ bình thường.
+
+Lưu ý: Mọi thay đổi trong Firewall Rules cần thực hiện Reset States để các cấu hình mới lập tức có hiệu lực, xóa bỏ các session cũ còn lưu trong bộ nhớ (Stateful Firewall).
